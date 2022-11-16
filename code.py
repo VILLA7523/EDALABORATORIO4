@@ -1,6 +1,6 @@
-from PIL import Image
+from PIL import Image # Libreria que agrega soporte para abrir, manipular y guardar muchos formatos de archivo de imagen diferentes
 
-class Color(object): # Clase Color: RGB
+class Color(object): # Clase Color: Almacena atributos RGB de un color
     def __init__(self, red=0, green=0, blue=0): # Constructor
         self.red = red
         self.green = green
