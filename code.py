@@ -1,4 +1,5 @@
 from PIL import Image # Libreria que agrega soporte para abrir, manipular y guardar muchos formatos de archivo de imagen diferentes
+import argparse
 
 class Color(object): # Clase Color: Almacena atributos RGB de un color
     def __init__(self, red=0, green=0, blue=0): # Constructor
@@ -11,14 +12,14 @@ class NodeOctree(object): # Clase Nodo del Octree
         self.color = Color(0, 0, 0)
         self.cntPixel = 0
         self.indPaleta = 0
-        self.children = [None, None , None , None , None , None , None ,None] # Ocho hijos del octree
+        self.children = [None for _ in range(8)] # Ocho hijos del octree
         if level < Octree.MAX_DEPTH - 1: # añade un nodo al nivel actual
             parent.AddNodeByLevel(level, self)
     def getNodesLeaf(self): # Obtener todos los nodos hoja
         nodesLeaf = []
         for i in range(8):
             if self.children[i]:
-                if self.cntPixel > 0:
+                if self.children[i].cntPixel > 0:
                     nodesLeaf.append(self.children[i])
                 else:
                     nodesLeaf.extend(self.children[i].getNodesLeaf())
@@ -114,31 +115,79 @@ class Octree(object): #  Clase Octree Quantizer
         return self.root.getIndPaleta(color, 0)
 
 def main():
-    image = Image.open('rainbow.png')
+    parser = argparse.ArgumentParser(description="Octree_Quantizer") #establecer algoritmos
+    parser.add_argument('input_file')
+    
+    args = vars(parser.parse_args())
+    print(args)
+    image = Image.open(args['input_file'])
     pixels = image.load()
     width, height = image.size
     octree = Octree() # Inicializando el octree
+    octree_64 = Octree() # Inicializando el octree
+    
     # Añadir los colores al octree
     for j in range(height):
         for i in range(width):
-            octree.addColor(Color(*pixels[i, j]))
+            color = Color(*pixels[i, j])
+            octree.addColor(color)
+            octree_64.addColor(color)
+    
+    ###################################### 256-bits ########################################33
     # 256 colores para una imagen de salida de 8 bits por pixel   
-    palette = octree.constructPaleta(256)
+    palette_256 = octree.constructPaleta(256)
+    
     # Crear paleta para 256 colores y guardar la paleta como archivo
-    palette_image = Image.new('RGB', (16, 16))
-    palette_pixels = palette_image.load()
-    for i, color in enumerate(palette):
-        palette_pixels[i % 16, i / 16] = (int(color.red), int (color.green), int (color.blue))
-    palette_image.save('rainbow_palette.png')
+    palette_256_image = Image.new('RGB', (16, 16))
+    palette_256_pixels = palette_256_image.load()
+    for i, color in enumerate(palette_256):
+        palette_256_pixels[i % 16, i / 16] = (int(color.red), int (color.green), int (color.blue))
+    
+    #Estableciendo el nombre del archivo de salida(paleta)
+    name = args['input_file'].split('.')
+    name = name[0] + '_256_palette.' + name[1]
+    palette_256_image.save('Img/' + name)
+    
     # Guardar la imagen resultante
     out_image = Image.new('RGB', (width, height))
     out_pixels = out_image.load()
     for j in range(height):
         for i in range(width):
-            index = octree.getIndPaleta(Color(*pixels[i, j]))
-            color = palette[index]
+            index = octree.getIndPaleta(Color(*pixels[i, j])) 
+            color = palette_256[index]
             out_pixels[i, j] = (int(color.red), int(color.green), int(color.blue))
-    out_image.save('rainbow_out.png')
+    #Estableciendo el nombre del archivo de salida(paleta)
+    name = args['input_file'].split('.')
+    name = name[0] + '_256_ImageReduced.' + name[1]
+    out_image.save('Img/' + name)
+    
+    ###################################### 64-bits ########################################33
+    # 64 colores para una imagen de salida de 6 bits por pixel   
+    palette_64 = octree_64.constructPaleta(64)
+    
+    # Crear paleta para 64 colores y guardar la paleta como archivo
+    palette_64_image = Image.new('RGB', (8, 8))
+    palette_64_pixels = palette_64_image.load()
+    for i, color in enumerate(palette_64):
+        palette_64_pixels[i % 8, i / 8] = (int(color.red), int (color.green), int (color.blue))
+    
+    #Estableciendo el nombre del archivo de salida(paleta)
+    name = args['input_file'].split('.')
+    name = name[0] + '_64_palette.' + name[1]
+    palette_64_image.save('Img/' + name)
+    
+    # Guardar la imagen resultante
+    out_image_64 = Image.new('RGB', (width, height))
+    out_pixels_64 = out_image_64.load()
+    for j in range(height):
+        for i in range(width):
+            index_64 = octree_64.getIndPaleta(Color(*pixels[i, j]))
+            color = palette_64[index_64]
+            out_pixels_64[i, j] = (int(color.red), int(color.green), int(color.blue))
+    #Estableciendo el nombre del archivo de salida(paleta)
+    name = args['input_file'].split('.')
+    name = name[0] + '_64_ImageReduced.' + name[1]
+    out_image_64.save('Img/' + name)
 
 if __name__ == '__main__':
     main()
